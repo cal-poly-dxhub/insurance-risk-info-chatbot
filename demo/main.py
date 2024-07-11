@@ -5,11 +5,14 @@ import boto3
 from llm_interface import get_llm_response
 from utils import print_terminal
 from colorama import Fore
-
+from dotenv import load_dotenv
+import os
+load_dotenv()
+DOMAIN = os.getenv("DOMAIN")
 def initialize_opensearch():
     region = 'YOUR_AWS_REGION'
     service = 'es'
-    domain = 'search-prism2-6tfd5m2fn72rpegmkn2xmlaqa4.YOUR_AWS_REGION.es.amazonaws.com'
+    domain = DOMAIN
 
     print_terminal("Initializing AWS credentials", Fore.YELLOW)
     credentials = boto3.Session().get_credentials()
@@ -87,8 +90,6 @@ def process_user_input(client, prompt):
                     print_terminal("Received response from LLM", Fore.GREEN)
 
                     st.markdown(llm_response)
-                    # st.markdown(f"Token count: {token_count}")
-                    # display token count with special formatting
                     st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)
                     print_terminal("Response from LLM: ", Fore.CYAN)
                     print_terminal(llm_response, Fore.CYAN)

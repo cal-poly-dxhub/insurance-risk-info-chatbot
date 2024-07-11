@@ -42,9 +42,7 @@ def setup_streamlit_ui():
     st.sidebar.title("Sample questions")
     st.sidebar.code("What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?", language="plaintext")
     st.sidebar.code("What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?", language="plaintext")
-    st.sidebar.code("What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?
-
-", language="plaintext")
+    st.sidebar.code("What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?", language="plaintext")
 
     if 'messages' not in st.session_state:
         st.session_state.messages = []

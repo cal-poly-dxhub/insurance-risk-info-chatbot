@@ -10,6 +10,7 @@ import io
 import openpyxl
 import csv
 import re
+import boto3
 from document_processor import process_document, process_xlsx
 
 BUCKET_NAME = "YOUR_BUCKET_NAME"
@@ -49,6 +50,50 @@ def detect_file_type(file_path):
     file_type = mime.from_file(file_path)
     return file_type
 
+def extract_job_title(text):
+    try:
+        # Use regular expression to find the job title after "Job: ---" and before "---"
+        match = re.search(r'Job: ---(.*?)---', text)
+        if match:
+            job_title = match.group(1).strip()
+            return job_title
+        else:
+            return None
+    except Exception as e:
+        print(f"An error occurred while extracting the job title: {e}")
+        return None
+
+# def unlock_and_get_excel_as_csv_string(file_path, password):
+#     try:
+#         # Open the encrypted file
+#         with open(file_path, 'rb') as file:
+#             office_file = msoffcrypto.OfficeFile(file)
+
+#             # Decrypt the file
+#             office_file.load_key(password=password)
+#             decrypted_file = io.BytesIO()
+#             office_file.decrypt(decrypted_file)
+
+#         # Read the decrypted Excel file
+#         df = pd.read_excel(decrypted_file)
+
+#         df = df.astype(str)
+
+#         df.fillna(" ", inplace=True)
+
+#         df.columns = ["" if "Unnamed" in col else col for col in df.columns]
+
+#         # Save DataFrame to CSV file
+#         df.to_csv("file", sep=',', index=False)
+
+#         # Convert DataFrame to CSV string
+#         csv_string = df.to_csv(sep='-', index=False)
+
+#         return csv_string
+#     except Exception as e:
+#         print(f"An error occurred while processing Excel: {e}")
+#         return None
+
 def unlock_and_get_excel_as_csv_string(file_path, password):
     try:
         # Open the encrypted file
@@ -75,7 +120,32 @@ def unlock_and_get_excel_as_csv_string(file_path, password):
     except Exception as e:
         print(f"An error occurred while processing Excel: {e}")
         return None
+    
+def format_xlsx(prompt):
+    """Invoke Claude 3 LLM and return the response."""
+    try:
+        model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+        bedrock_runtime = boto3.client(service_name='bedrock-runtime')
 
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "system": "Format this data into a  human readable format. Make sure all data is included.",
+            "max_tokens": 2000,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 1,
+            "top_p": 0.999,
+            "top_k": 250,
+        })
+
+        response = bedrock_runtime.invoke_model(body=body, modelId=model_id)
+        response_body = json.loads(response.get('body').read())
+        
+        return response_body["content"][0]["text"]
+
+    except Exception as e:
+        print(f"Claude Error: {e}")
+        return None
+    
 def unlock_and_save_pdf(file_path, password):
     try:
         doc = fitz.open(file_path)
@@ -132,8 +202,37 @@ for url in urls:
         csv_path = file_path + ".pdf"
 
         csv_text = unlock_and_get_excel_as_csv_string(file_path, password)
-        #print(csv_text)
-        process_xlsx(BUCKET_NAME, file_name, csv_text, url)
+        job = extract_job_title(csv_text)
+        csv_text = format_xlsx(csv_text)
+
+        
+
+        
+        print(job)
+        #print(job)
+
+        questions = (
+            f"Sample Questions a user would ask about a {job} job."
+            f"What is the required equipment for a {job}?\n"
+            f"What is the PPE required for a {job}?\n"
+            f"What is the optional PPE required for a {job}?\n"
+            f"What is the required training for a {job}?\n"
+            f"What are the procedures for a {job}?\n"
+            f"What are the potential hazards for a {job}?\n"
+            f"What are the protective measures for a {job}?\n"
+            f"How does a {job} minimize risk of injury?\n"
+            f"What is the risk/hazard rating for a {job}?\n"
+            f"What are the JSA Steps for a {job}?\n"
+            f"How could a {job} get hurt?\n"
+            f"What are the duties of a {job}?"
+            "Actual Job Information"
+        )
+
+        job_with_questions = questions + csv_text
+
+        #print(job_with_questions)
+
+        process_xlsx(BUCKET_NAME, file_name, job_with_questions, url)
 
         print(f"Excel file processed successfully: {file_name}")
 

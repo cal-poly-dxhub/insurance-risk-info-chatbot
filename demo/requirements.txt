@@ -5,4 +5,3 @@ streamlit
 opensearch-py
 requests-aws4auth
 tiktoken
-dotenv

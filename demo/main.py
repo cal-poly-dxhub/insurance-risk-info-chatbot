@@ -85,7 +85,8 @@ def process_user_input(client, prompt):
                     context = "\n\n".join(hit['_source']['passage'] for hit in response['hits']['hits'] if 'passage' in hit['_source'])
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
-                    model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+                    #model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+                    model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
                     temperature = 0.7
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)

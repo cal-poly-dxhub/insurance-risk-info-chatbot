@@ -7,5 +7,7 @@ sudo yum update -y
 # Install Python 3 and pip if not already installed
 sudo yum install -y python3 python3-pip
 
-# Install venv module
-sudo yum install -y python3-venv
+# Install virtualenv using pip
+sudo python3 -m pip install virtualenv
+
+echo "Installation of system packages and virtualenv complete."

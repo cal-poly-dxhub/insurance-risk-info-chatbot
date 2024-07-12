@@ -7,7 +7,7 @@ cd /home/ec2-user/prism/demo
 # Create a virtual environment if it doesn't exist
 if [ ! -d "venv" ]; then
     echo "Creating virtual environment..."
-    python3 -m venv venv
+    virtualenv venv
 fi
 
 # Activate the virtual environment

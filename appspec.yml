@@ -3,6 +3,11 @@ os: linux
 files:
   - source: /
     destination: /home/ec2-user/prism
+permissions:
+  - object: /home/ec2-user/prism
+    pattern: "**"
+    owner: ec2-user
+    group: ec2-user
 hooks:
   BeforeInstall:
     - location: scripts/before_install.sh
@@ -11,8 +16,8 @@ hooks:
   AfterInstall:
     - location: scripts/after_install.sh
       timeout: 300
-      runas: root
+      runas: ec2-user
   ApplicationStart:
     - location: scripts/start_application.sh
       timeout: 300
-      runas: root
+      runas: ec2-user

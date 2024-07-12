@@ -7,6 +7,7 @@ from utils import print_terminal
 from colorama import Fore
 from dotenv import load_dotenv
 import os
+import re
 load_dotenv()
 DOMAIN = os.getenv("DOMAIN")
 def initialize_opensearch():
@@ -45,7 +46,13 @@ def setup_streamlit_ui():
     st.sidebar.title("Sample questions")
     st.sidebar.code("What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?", language="plaintext")
     st.sidebar.code("What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?", language="plaintext")
-    st.sidebar.code("What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?", language="plaintext")
+    st.sidebar.code("What is the required training for a bus driver?", language="plaintext")
+    st.sidebar.code("What PPE should a fire fighter have?", language="plaintext")
+    st.sidebar.code("What does a elementary teacher do?", language="plaintext")
+    st.sidebar.code("What are the risks of being a carpenter?", language="plaintext")
+    st.sidebar.code("How can I ensure the wellness of my employees?", language="plaintext")
+    st.sidebar.code("How should I prepare for public power shutoffs?", language="plaintext")
+    st.sidebar.code("What are signs of unusual mail handling?", language="plaintext")
 
     if 'messages' not in st.session_state:
         st.session_state.messages = []
@@ -53,6 +60,12 @@ def setup_streamlit_ui():
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
+
+def remove_unlocked_prefix(doc_id):
+    """
+    Remove the 'unlocked_' prefix from a document ID.
+    """
+    return re.sub(r'^unlocked_', '', doc_id)
 
 def process_user_input(client, prompt):
     print_terminal(f"Received user prompt: {prompt}", Fore.CYAN)
@@ -80,10 +93,21 @@ def process_user_input(client, prompt):
 
                 if response['hits']['total']['value'] > 0:
                     print_terminal(f"Found {response['hits']['total']['value']} relevant documents", Fore.CYAN)
-                    context = "\n\n".join(hit['_source']['passage'] for hit in response['hits']['hits'] if 'passage' in hit['_source'])
+                    hits = response['hits']['hits']
+                    context = "\n\n".join(hit['_source']['passage'] for hit in hits if 'passage' in hit['_source'])
+
+
+                    unique_urls = set(
+                        f"- [{remove_unlocked_prefix(hit['_source']['doc_id'])}]({hit['_source']['url']})"
+                        for hit in hits if 'url' in hit['_source']
+                    )
+
+                    # Convert the set to a single string with each URL on a new line
+                    urls = "\n##### Retrieved Documents\n" + "\n".join(unique_urls)
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
-                    model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+                    #model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+                    model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
                     temperature = 0.7
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
@@ -91,10 +115,12 @@ def process_user_input(client, prompt):
 
                     st.markdown(llm_response)
                     st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)
+                    st.markdown(urls)
+
                     print_terminal("Response from LLM: ", Fore.CYAN)
                     print_terminal(llm_response, Fore.CYAN)
                     print(f"Token count: {token_count}", Fore.CYAN)
-                    st.session_state.messages.append({"role": "assistant", "content": llm_response})
+                    st.session_state.messages.append({"role": "assistant", "content": llm_response + urls})
                     print_terminal("Response displayed to user", Fore.GREEN)
                 else:
                     print_terminal("No relevant documents found", Fore.YELLOW)

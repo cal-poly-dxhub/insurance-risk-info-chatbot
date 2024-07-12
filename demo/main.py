@@ -5,14 +5,16 @@ import boto3
 from llm_interface import get_llm_response
 from utils import print_terminal
 from colorama import Fore
-from dotenv import load_dotenv
-import os
-load_dotenv()
-DOMAIN = os.getenv("DOMAIN")
+
+def get_parameter(param_name):
+    ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
+    response = ssm.get_parameter(Name=param_name, WithDecryption=True)
+    return response['Parameter']['Value']
+
 def initialize_opensearch():
     region = 'YOUR_AWS_REGION'
     service = 'es'
-    domain = DOMAIN
+    domain = get_parameter('/prism/opensearch/domain')
 
     print_terminal("Initializing AWS credentials", Fore.YELLOW)
     credentials = boto3.Session().get_credentials()

@@ -21,7 +21,7 @@ def generate_response(messages, model_id, temperature):
         "max_tokens": 1000,
         "temperature": temperature,
         "top_k": 100,
-        "top_p": 0.8,
+        "top_p": 0.999,
     }
 
     formatted_messages = []
@@ -77,6 +77,24 @@ def get_llm_response(user_query, context, model_id, temperature):
     print_terminal(llm_prompt, Fore.WHITE)
 
     messages = [("user", llm_prompt)]
+    response = generate_response(messages, model_id, temperature)
+
+    return response, count_tokens(llm_prompt)
+
+def get_llm_context_check(user_query, context, model_id, temperature=1):
+    # Define the prompt to instruct the LLM to determine if there is enough context
+    context_check_prompt = """
+    Your task is to determine if a returned answer sufficiently answers for a question
+    """
+
+    # Format the prompt with the user query and context
+    llm_prompt = context_check_prompt.format(user_query=user_query, context=context)
+    print_terminal("LLM context check prompt:", Fore.MAGENTA)
+    print_terminal(llm_prompt, Fore.WHITE)
+
+    # Prepare the messages for the LLM
+    messages = [("user", llm_prompt)]
+    # Generate the response using the LLM
     response = generate_response(messages, model_id, temperature)
 
     return response, count_tokens(llm_prompt)

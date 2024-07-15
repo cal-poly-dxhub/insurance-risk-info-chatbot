@@ -8,6 +8,8 @@ from colorama import Fore
 from dotenv import load_dotenv
 import os
 import re
+from citation_tools import *
+
 load_dotenv()
 DOMAIN = os.getenv("DOMAIN")
 def initialize_opensearch():
@@ -94,16 +96,53 @@ def process_user_input(client, prompt):
                 if response['hits']['total']['value'] > 0:
                     print_terminal(f"Found {response['hits']['total']['value']} relevant documents", Fore.CYAN)
                     hits = response['hits']['hits']
+                    
+                    score = 0
+                    page_num = 0
+                    markdown_urls = []
+
+                    for hit in hits:
+                        url = hit['_source']['url']
+                        password = "YOUR_PASSWORD"
+                        passage = hit['_source']['passage']
+
+                        if "job-safety-analyses" not in url:
+                            # Download and unlock the PDF
+                            try:
+                                pdf_stream = download_pdf(url)
+                                unlocked_pdf_stream = unlock_pdf(pdf_stream, password)
+
+                                # Extract text and find the most similar page
+                                text_by_page = extract_text_from_pdf(unlocked_pdf_stream)
+                                page_num, score = find_most_similar_page(passage, text_by_page)
+
+                            except:
+                                print("File not pdf")
+
+                            url = url + f"#page={page_num}"
+
+                            doc_title = remove_unlocked_prefix(hit['_source']['doc_id']) + f"-page-{page_num}"
+                            markdown_urls.append((f"- [{doc_title}]({url})", score))
+
+                        else:
+                            score = 100
+                            doc_title = remove_unlocked_prefix(hit['_source']['doc_id'])
+                            markdown_urls.append((f"- [{doc_title}]({url})", score))
+
+                    # Remove duplicates based on the first item in the URL tuples
+                    unique_markdown_urls = {}
+                    for url, score in markdown_urls:
+                        if url not in unique_markdown_urls or unique_markdown_urls[url] < score:
+                            unique_markdown_urls[url] = score
+
+                    # Sort the unique URLs by score
+                    unique_sorted_markdown_urls = sorted(unique_markdown_urls.items(), key=lambda x: x[1], reverse=True)
+
+                    # Prepare the context string
                     context = "\n\n".join(hit['_source']['passage'] for hit in hits if 'passage' in hit['_source'])
 
-
-                    unique_urls = set(
-                        f"- [{remove_unlocked_prefix(hit['_source']['doc_id'])}]({hit['_source']['url']})"
-                        for hit in hits if 'url' in hit['_source']
-                    )
-
                     # Convert the set to a single string with each URL on a new line
-                    urls = "\n##### Retrieved Documents\n" + "\n".join(unique_urls)
+                    urls = "\n##### Retrieved Documents\n" + "\n".join(url for url, score in unique_sorted_markdown_urls)
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
                     #model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
@@ -112,6 +151,8 @@ def process_user_input(client, prompt):
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
                     print_terminal("Received response from LLM", Fore.GREEN)
+
+                    print_terminal(f"chunks used {urls}", Fore.GREEN)
 
                     st.markdown(llm_response)
                     st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)

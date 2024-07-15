@@ -3,6 +3,12 @@ import io
 from pypdf import PdfReader
 from difflib import SequenceMatcher
 import re
+import boto3
+
+def get_parameter(param_name):
+    ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
+    response = ssm.get_parameter(Name=param_name, WithDecryption=True)
+    return response['Parameter']['Value']
 
 def preprocess_text(text):
     return re.sub(r'\s+', ' ', text).lower().strip()
@@ -10,7 +16,14 @@ def preprocess_text(text):
 def fast_find_text_in_pdf(url, search_text, threshold=0.5):
     response = requests.get(url)
     pdf_file = io.BytesIO(response.content)
-    pdf_reader = PdfReader(pdf_file)
+
+    try:
+        pdf_reader = PdfReader(pdf_file)
+        if pdf_reader.is_encrypted:
+            pdf_reader.decrypt(get_parameter('/prism/pdf/password'))
+    except:
+        print(f"Error: Unable to read PDF or incorrect password for {url}")
+        return None
 
     search_text = preprocess_text(search_text)
     best_match = (0, None)  # (similarity, page_number)

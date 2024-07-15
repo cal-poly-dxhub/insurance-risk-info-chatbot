@@ -7,7 +7,7 @@ from utils import print_terminal
 from colorama import Fore
 import random
 import string
-
+from pdf_utils import get_url_with_page
 def get_parameter(param_name):
     ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
     response = ssm.get_parameter(Name=param_name, WithDecryption=True)
@@ -43,6 +43,7 @@ def initialize_opensearch():
         return None
 
 def setup_streamlit_ui():
+    st.set_page_config(page_title="Prism-bot v0.1")
     st.title("Prism-bot v0.1")
 
     # Sidebar
@@ -130,6 +131,11 @@ def process_user_input(client, prompt):
                         elif 'locked_' in data['doc_id']:
                             data['locked'] = True
                             data['doc_id'] = data['doc_id'].replace("locked_", "")
+                        print_terminal("Old url: ", Fore.CYAN)
+                        print_terminal(data['url'], Fore.CYAN)
+                        data['url'] = get_url_with_page(data['url'], data['passage'])
+                        print_terminal("New url: ", Fore.CYAN)
+                        print_terminal(data['url'], Fore.CYAN)
                         llm_response = llm_response.replace(uuid, f"[{data['doc_id']}]({data['url']})")
 
                     if check_irrelevant_question(llm_response):

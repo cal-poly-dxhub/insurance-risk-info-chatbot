@@ -5,6 +5,8 @@ import boto3
 from llm_interface import get_llm_response
 from utils import print_terminal
 from colorama import Fore
+import random
+import string
 
 def get_parameter(param_name):
     ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
@@ -56,6 +58,17 @@ def setup_streamlit_ui():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+def generate_unique_id(existing_ids):
+    while True:
+        new_id = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        if new_id not in existing_ids:
+            return new_id
+
+def check_irrelevant_question(llm_response):
+    if 'IQ' in llm_response:
+        return True
+    return False
+
 def process_user_input(client, prompt):
     print_terminal(f"Received user prompt: {prompt}", Fore.CYAN)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -79,20 +92,51 @@ def process_user_input(client, prompt):
                 print_terminal("Executing OpenSearch query", Fore.YELLOW)
                 response = client.search(index="test2-titanv2-new", body=query)
                 print_terminal("OpenSearch query executed successfully", Fore.GREEN)
+                print_terminal("Response from OpenSearch: ", Fore.CYAN)
+                print_terminal(str(response), Fore.CYAN)
 
                 if response['hits']['total']['value'] > 0:
                     print_terminal(f"Found {response['hits']['total']['value']} relevant documents", Fore.CYAN)
-                    context = "\n\n".join(hit['_source']['passage'] for hit in response['hits']['hits'] if 'passage' in hit['_source'])
+                    
+                    id_url_doc_map = {}
+                    context_chunks = []
+
+                    for hit in response['hits']['hits']:
+                        if 'passage' in hit['_source'] and 'url' in hit['_source'] and 'doc_id' in hit['_source']:
+                            unique_id = generate_unique_id(id_url_doc_map.keys())
+                            id_url_doc_map[unique_id] = {
+                                'url': hit['_source']['url'],
+                                'passage': hit['_source']['passage'],
+                                'doc_id': hit['_source']['doc_id'],
+                                'locked': False
+                            }
+                            context_chunks.append(f"uuid: {unique_id}, passage: {hit['_source']['passage']}")
+
+                    context = "\n\n".join(context_chunks)
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
-                    #model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
                     model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
                     temperature = 0.7
+                    
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
                     print_terminal("Received response from LLM", Fore.GREEN)
 
-                    st.markdown(llm_response)
+                    # Replace UUIDs with URLs in the LLM response
+                    for uuid, data in id_url_doc_map.items():
+                        if 'unlocked_' in data['doc_id']:
+                            data['locked'] = False 
+                            data['doc_id'] = data['doc_id'].replace("unlocked_", "")
+                        elif 'locked_' in data['doc_id']:
+                            data['locked'] = True
+                            data['doc_id'] = data['doc_id'].replace("locked_", "")
+                        llm_response = llm_response.replace(uuid, f"[{data['doc_id']}]({data['url']})")
+
+                    if check_irrelevant_question(llm_response):
+                        st.markdown("Sorry I can't answer that question. Please ask another question.")
+                        print_terminal("Irrelevant question detected", Fore.YELLOW)
+                    else:
+                        st.markdown(llm_response)
                     st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)
                     print_terminal("Response from LLM: ", Fore.CYAN)
                     print_terminal(llm_response, Fore.CYAN)
@@ -108,6 +152,7 @@ def process_user_input(client, prompt):
                 print_terminal(f"Error: {error_message}", Fore.RED)
                 st.markdown(error_message)
                 st.session_state.messages.append({"role": "assistant", "content": error_message})
+
 
 def main():
     print_terminal("Starting Prism-bot v0.1", Fore.GREEN)

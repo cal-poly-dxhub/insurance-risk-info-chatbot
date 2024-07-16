@@ -81,23 +81,31 @@ def get_llm_response(user_query, context, model_id, temperature):
 
     return response, count_tokens(llm_prompt)
 
-def get_llm_context_check(user_query, context, model_id, temperature=1):
-    # Define the prompt to instruct the LLM to determine if there is enough context
-    context_check_prompt = """
-    Your task is to determine if a returned answer sufficiently answers for a question
-    """
+def classify_response(prompt):
+    """Invoke Claude 3 LLM and return the response."""
+    try:
+        bedrock_runtime = boto3.client(service_name='bedrock-runtime')
 
-    # Format the prompt with the user query and context
-    llm_prompt = context_check_prompt.format(user_query=user_query, context=context)
-    print_terminal("LLM context check prompt:", Fore.MAGENTA)
-    print_terminal(llm_prompt, Fore.WHITE)
+        model_id = "anthropic.claude-3-haiku-20240307-v1:0"
 
-    # Prepare the messages for the LLM
-    messages = [("user", llm_prompt)]
-    # Generate the response using the LLM
-    response = generate_response(messages, model_id, temperature)
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "system": "Determine if the proivded answer properly answers the question. Respond only with YES or NO.",
+            "max_tokens": 2000,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 1,
+            "top_p": 0.999,
+            "top_k": 250,
+        })
 
-    return response, count_tokens(llm_prompt)
+        response = bedrock_runtime.invoke_model(body=body, modelId=model_id)
+        response_body = json.loads(response.get('body').read())
+        
+        return response_body["content"][0]["text"]
+
+    except Exception as e:
+        print(f"Claude Error: {e}")
+        return None
 
 # def summarize(input_text):
 #     with open("summarize_prompt.txt", "r") as file:

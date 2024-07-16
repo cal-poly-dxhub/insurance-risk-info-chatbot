@@ -92,17 +92,25 @@ def get_markdown_urls(hits):
 def setup_streamlit_ui():
     st.title("Prism-bot v0.1")
 
-    # Sidebar
-    st.sidebar.title("Sample questions")
-    st.sidebar.code("What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?", language="plaintext")
-    st.sidebar.code("What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?", language="plaintext")
-    st.sidebar.code("What is the required training for a bus driver?", language="plaintext")
-    st.sidebar.code("What PPE should a fire fighter have?", language="plaintext")
-    st.sidebar.code("What does a elementary teacher do?", language="plaintext")
-    st.sidebar.code("What are the risks of being a carpenter?", language="plaintext")
-    st.sidebar.code("How can I ensure the wellness of my employees?", language="plaintext")
-    st.sidebar.code("How should I prepare for public power shutoffs?", language="plaintext")
-    st.sidebar.code("What are signs of unusual mail handling?", language="plaintext")
+    suggested_questions = [
+        "What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?",
+        "What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?",
+        "What is the required training for a bus driver?",
+        "What PPE should a fire fighter have?",
+        "What does an elementary teacher do?",
+        "What are the risks of being a carpenter?",
+        "How can I ensure the wellness of my employees?",
+        "How should I prepare for public power shutoffs?",
+        "What are signs of unusual mail handling?",
+        "What color is the sky?",
+    ]
+
+    with st.sidebar:
+        st.markdown("Sample Questions")
+        for question in suggested_questions:
+            if st.button(question):
+                st.session_state['current_question'] = question
+                st.session_state['submit'] = True
 
     if 'messages' not in st.session_state:
         st.session_state.messages = []
@@ -183,6 +191,10 @@ def process_user_input(client, prompt):
                 st.session_state.messages.append({"role": "assistant", "content": error_message})
 
 def main():
+    if 'current_question' not in st.session_state:
+        st.session_state['current_question'] = ''
+
+
     print_terminal("Starting Prism-bot v0.1", Fore.GREEN)
 
     client = initialize_opensearch()
@@ -195,6 +207,10 @@ def main():
     prompt = st.chat_input("What is your question?")
     if prompt:
         process_user_input(client, prompt)
+
+    if st.session_state['current_question'] != '':
+        process_user_input(client, st.session_state['current_question'])
+        st.session_state['current_question'] = ''
 
     if st.sidebar.button("Clear Chat History"):
         print_terminal("Clearing chat history", Fore.CYAN)

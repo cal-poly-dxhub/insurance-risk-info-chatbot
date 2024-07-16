@@ -90,7 +90,7 @@ def classify_response(prompt):
 
         body = json.dumps({
             "anthropic_version": "bedrock-2023-05-31",
-            "system": "Determine if the proivded answer properly answers the question. Respond only with YES or NO.",
+            "system": "Determine if the provided answer properly answers the question. Respond only with YES or NO.",
             "max_tokens": 2000,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 1,

@@ -2,7 +2,7 @@ import streamlit as st
 from opensearchpy import OpenSearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 import boto3
-from llm_interface import get_llm_response
+from llm_interface import get_llm_response, classify_response
 from utils import print_terminal
 from colorama import Fore
 from dotenv import load_dotenv
@@ -40,6 +40,54 @@ def initialize_opensearch():
     except Exception as e:
         print_terminal(f"Failed to connect to OpenSearch: {str(e)}", Fore.RED)
         return None
+    
+def get_markdown_urls(hits):
+    score = 0
+    page_num = 0
+    markdown_urls = []
+
+    for hit in hits:
+        url = hit['_source']['url']
+        password = "YOUR_PASSWORD"
+        passage = hit['_source']['passage']
+
+        if "job-safety-analyses" not in url:
+            # Download and unlock the PDF
+            try:
+                pdf_stream = download_pdf(url)
+                unlocked_pdf_stream = unlock_pdf(pdf_stream, password)
+
+                # Extract text and find the most similar page
+                text_by_page = extract_text_from_pdf(unlocked_pdf_stream)
+                page_num, score = find_most_similar_page(passage, text_by_page)
+
+            except Exception as e:
+                print(f"Error processing PDF: {e}")
+
+            url = url + f"#page={page_num}"
+
+            doc_title = remove_unlocked_prefix(hit['_source']['doc_id']) + f"-page-{page_num}"
+            markdown_urls.append((f"- [{doc_title}]({url})", score))
+
+        else:
+            score = 100
+            doc_title = remove_unlocked_prefix(hit['_source']['doc_id'])
+            markdown_urls.append((f"- [{doc_title}]({url})", score))
+
+    # Remove duplicates based on the first item in the URL tuples
+    unique_markdown_urls = {}
+    for url, score in markdown_urls:
+        if url not in unique_markdown_urls or unique_markdown_urls[url] < score:
+            unique_markdown_urls[url] = score
+
+    # Sort the unique URLs by score
+    unique_sorted_markdown_urls = sorted(unique_markdown_urls.items(), key=lambda x: x[1], reverse=True)
+
+    # Convert the set to a single string with each URL on a new line
+    urls = "\n##### Retrieved Documents\n" + "\n".join(url for url, score in unique_sorted_markdown_urls)
+    
+    return urls
+
 
 def setup_streamlit_ui():
     st.title("Prism-bot v0.1")
@@ -97,52 +145,9 @@ def process_user_input(client, prompt):
                     print_terminal(f"Found {response['hits']['total']['value']} relevant documents", Fore.CYAN)
                     hits = response['hits']['hits']
                     
-                    score = 0
-                    page_num = 0
-                    markdown_urls = []
-
-                    for hit in hits:
-                        url = hit['_source']['url']
-                        password = "YOUR_PASSWORD"
-                        passage = hit['_source']['passage']
-
-                        if "job-safety-analyses" not in url:
-                            # Download and unlock the PDF
-                            try:
-                                pdf_stream = download_pdf(url)
-                                unlocked_pdf_stream = unlock_pdf(pdf_stream, password)
-
-                                # Extract text and find the most similar page
-                                text_by_page = extract_text_from_pdf(unlocked_pdf_stream)
-                                page_num, score = find_most_similar_page(passage, text_by_page)
-
-                            except:
-                                print("File not pdf")
-
-                            url = url + f"#page={page_num}"
-
-                            doc_title = remove_unlocked_prefix(hit['_source']['doc_id']) + f"-page-{page_num}"
-                            markdown_urls.append((f"- [{doc_title}]({url})", score))
-
-                        else:
-                            score = 100
-                            doc_title = remove_unlocked_prefix(hit['_source']['doc_id'])
-                            markdown_urls.append((f"- [{doc_title}]({url})", score))
-
-                    # Remove duplicates based on the first item in the URL tuples
-                    unique_markdown_urls = {}
-                    for url, score in markdown_urls:
-                        if url not in unique_markdown_urls or unique_markdown_urls[url] < score:
-                            unique_markdown_urls[url] = score
-
-                    # Sort the unique URLs by score
-                    unique_sorted_markdown_urls = sorted(unique_markdown_urls.items(), key=lambda x: x[1], reverse=True)
 
                     # Prepare the context string
                     context = "\n\n".join(hit['_source']['passage'] for hit in hits if 'passage' in hit['_source'])
-
-                    # Convert the set to a single string with each URL on a new line
-                    urls = "\n##### Retrieved Documents\n" + "\n".join(url for url, score in unique_sorted_markdown_urls)
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
                     #model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
@@ -152,16 +157,20 @@ def process_user_input(client, prompt):
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
                     print_terminal("Received response from LLM", Fore.GREEN)
 
-                    print_terminal(f"chunks used {urls}", Fore.GREEN)
-
-                    st.markdown(llm_response)
-                    st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)
-                    st.markdown(urls)
+                    if classify_response(prompt + llm_response) == "YES":
+                        st.markdown(llm_response)
+                        st.markdown(f"Token count: <span style='color:blue'>{token_count}</span>", unsafe_allow_html=True)
+                        urls = get_markdown_urls(hits)
+                        st.markdown(urls)
+                        st.session_state.messages.append({"role": "assistant", "content": llm_response + urls})
+                    else:
+                        st.markdown("Insufficient context.")
+                        st.session_state.messages.append({"role": "assistant", "content": "Insufficient context."})
 
                     print_terminal("Response from LLM: ", Fore.CYAN)
                     print_terminal(llm_response, Fore.CYAN)
                     print(f"Token count: {token_count}", Fore.CYAN)
-                    st.session_state.messages.append({"role": "assistant", "content": llm_response + urls})
+                    
                     print_terminal("Response displayed to user", Fore.GREEN)
                 else:
                     print_terminal("No relevant documents found", Fore.YELLOW)

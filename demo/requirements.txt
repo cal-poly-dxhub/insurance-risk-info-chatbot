@@ -5,3 +5,5 @@ streamlit
 opensearch-py
 requests-aws4auth
 tiktoken
+pypdf
+fuzzywuzzy

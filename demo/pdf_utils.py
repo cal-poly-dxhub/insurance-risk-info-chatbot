@@ -7,6 +7,9 @@ import boto3
 import time
 from utils import print_terminal
 from colorama import Fore
+import threading
+from stopit import threading_timeoutable as timeoutable
+
 def get_parameter(param_name):
     ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
     response = ssm.get_parameter(Name=param_name, WithDecryption=True)
@@ -43,12 +46,16 @@ def fast_find_text_in_pdf(url, search_text, threshold=0.5):
         return best_match[1]
     return None
 
+@timeoutable()
 def get_url_with_page(url, chunk):
     start_time = time.time()
+    
     page_number = fast_find_text_in_pdf(url, chunk)
+    
     time_elapsed = time.time() - start_time
     print_terminal(f"Time elapsed: {time_elapsed:.2f} seconds", Fore.YELLOW)
+    
     if page_number is not None:
         return f"{url}#page={page_number}"
     else:
-        return url  # Return the original URL if text is not found
+        return url

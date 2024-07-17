@@ -8,6 +8,9 @@ from colorama import Fore
 import random
 import string
 from pdf_utils import get_url_with_page
+from search_utils import _get_emb_, hybrid_search, normalize_scores_
+import time
+
 def get_parameter(param_name):
     ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
     response = ssm.get_parameter(Name=param_name, WithDecryption=True)
@@ -33,7 +36,6 @@ def initialize_opensearch():
         connection_class = RequestsHttpConnection
     )
 
-    # Test OpenSearch connection
     try:
         info = client.info()
         print_terminal(f"Successfully connected to OpenSearch. Cluster name: {info['cluster_name']}", Fore.GREEN)
@@ -70,6 +72,27 @@ def check_irrelevant_question(llm_response):
         return True
     return False
 
+def select_top_documents(hybrid_results, max_docs=10):
+    documents = hybrid_results['hits']['hits']
+    sorted_docs = sorted(documents, key=lambda x: x['_score'], reverse=True)
+    
+    if len(sorted_docs) <= max_docs:
+        return sorted_docs
+    
+    selected_docs = sorted_docs[:max_docs]
+    scores = [doc['_score'] for doc in selected_docs]
+    
+    # Find the largest score drop-off
+    score_diffs = [scores[i] - scores[i+1] for i in range(len(scores)-1)]
+    if score_diffs:
+        max_drop_index = score_diffs.index(max(score_diffs))
+        print_terminal(f"Dropping documents from index {max_drop_index+1}", Fore.CYAN)
+        print_terminal(f"Picked docs and scores: {[(doc['_id'], doc['_score']) for doc in selected_docs]}", Fore.CYAN)
+        print_terminal(f"Top 10 dropped docs and scores: {[(doc['_id'], doc['_score']) for doc in sorted_docs[max_drop_index+1:max_drop_index+11]]}", Fore.CYAN)
+        return sorted_docs[:max_drop_index+1]
+    else:
+        return selected_docs
+
 def process_user_input(client, prompt):
     print_terminal(f"Received user prompt: {prompt}", Fore.CYAN)
     st.session_state.messages.append({"role": "user", "content": prompt})
@@ -77,32 +100,53 @@ def process_user_input(client, prompt):
         st.markdown(prompt)
 
     print_terminal("Preparing OpenSearch query", Fore.YELLOW)
-    query = {
+    
+    embedding = _get_emb_(prompt)
+    
+    lexical_query = {
         "query": {
             "match": {
                 "passage": prompt
             }
         },
-        "size": 3
+        "size": 20,
+        "_source": {"exclude": ["embedding"]}
     }
+    
+    semantic_query = {
+        "query": {
+            "knn": {
+                "embedding": {
+                    "vector": embedding,
+                    "k": 20
+                }
+            }
+        },
+        "size": 20,
+        "_source": {"exclude": ["embedding"]}
+    }
+
     print_terminal("OpenSearch query prepared", Fore.GREEN)
 
     with st.chat_message("assistant"):
         with st.spinner("Thinking..."):
             try:
-                print_terminal("Executing OpenSearch query", Fore.YELLOW)
-                response = client.search(index="test2-titanv2-new", body=query)
-                print_terminal("OpenSearch query executed successfully", Fore.GREEN)
-                print_terminal("Response from OpenSearch: ", Fore.CYAN)
-                print_terminal(str(response), Fore.CYAN)
+                print_terminal("Executing OpenSearch queries", Fore.YELLOW)
+                lexical_results = client.search(index="test2-titanv2-new", body=lexical_query)
+                semantic_results = client.search(index="test2-titanv2-new", body=semantic_query)
+                print_terminal("OpenSearch queries executed successfully", Fore.GREEN)
 
-                if response['hits']['total']['value'] > 0:
-                    print_terminal(f"Found {response['hits']['total']['value']} relevant documents", Fore.CYAN)
+                hybrid_results = hybrid_search(20, lexical_results, semantic_results, interpolation_weight=0.5, normalizer="minmax", use_rrf=False)
+                
+                selected_docs = select_top_documents(hybrid_results)
+                
+                if selected_docs:
+                    print_terminal(f"Found {len(selected_docs)} relevant documents", Fore.CYAN)
                     
                     id_url_doc_map = {}
                     context_chunks = []
 
-                    for hit in response['hits']['hits']:
+                    for hit in selected_docs:
                         if 'passage' in hit['_source'] and 'url' in hit['_source'] and 'doc_id' in hit['_source']:
                             unique_id = generate_unique_id(id_url_doc_map.keys())
                             id_url_doc_map[unique_id] = {
@@ -133,7 +177,10 @@ def process_user_input(client, prompt):
                             data['doc_id'] = data['doc_id'].replace("locked_", "")
                         print_terminal("Old url: ", Fore.CYAN)
                         print_terminal(data['url'], Fore.CYAN)
-                        data['url'] = get_url_with_page(data['url'], data['passage'])
+                        # data['url'] = get_url_with_page(data['url'], data['passage'])
+                        modified_url =  get_url_with_page(data['url'], data['passage'], timeout=2)
+                        if modified_url is not None:
+                            data['url'] = modified_url
                         print_terminal("New url: ", Fore.CYAN)
                         print_terminal(data['url'], Fore.CYAN)
                         llm_response = llm_response.replace(uuid, f"[{data['doc_id']}]({data['url']})")
@@ -159,7 +206,6 @@ def process_user_input(client, prompt):
                 st.markdown(error_message)
                 st.session_state.messages.append({"role": "assistant", "content": error_message})
 
-
 def main():
     print_terminal("Starting Prism-bot v0.1", Fore.GREEN)
 
@@ -172,8 +218,10 @@ def main():
 
     prompt = st.chat_input("What is your question?")
     if prompt:
+        query_start_time = time.time()
         process_user_input(client, prompt)
-
+        query_end_time = time.time()
+        print_terminal(f"Query processing time: {query_end_time - query_start_time:.2f} seconds", Fore.YELLOW)
     if st.sidebar.button("Clear Chat History"):
         print_terminal("Clearing chat history", Fore.CYAN)
         st.session_state.messages = []

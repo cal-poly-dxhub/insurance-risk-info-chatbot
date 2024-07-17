@@ -8,7 +8,8 @@ from colorama import Fore
 import random
 import string
 from pdf_utils import get_url_with_page
-from search_utils import _get_emb_, hybrid_search, normalize_scores_
+# from search_utils import _get_emb_, hybrid_search, normalize_scores_0
+from search_utils import _get_emb_, hybrid_search
 import time
 
 def get_parameter(param_name):

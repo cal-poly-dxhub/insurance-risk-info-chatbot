@@ -1,0 +1,9 @@
+boto3
+botocore
+colorama
+streamlit
+opensearch-py
+requests-aws4auth
+tiktoken
+pypdf
+stopit

@@ -65,6 +65,7 @@ def setup_streamlit_ui():
     st.sidebar.code("What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?", language="plaintext")
     st.sidebar.code("What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?", language="plaintext")
     st.sidebar.code("What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?", language="plaintext")
+    st.sidebar.code("What are the five basic steps in administering insurance clauses in contracts?", language="plaintext")
 
     if 'messages' not in st.session_state:
         st.session_state.messages = []
@@ -173,7 +174,7 @@ def process_user_input(client, prompt):
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
                     model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
-                    temperature = 0
+                    temperature = 1 
                     
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)

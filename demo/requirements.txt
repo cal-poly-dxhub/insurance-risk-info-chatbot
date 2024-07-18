@@ -1,7 +1,9 @@
 boto3
 botocore
 colorama
+langchain_aws
 langchain_community
+langchain_core
 numpy
 opensearch_py
 pypdf

@@ -167,7 +167,7 @@ def process_user_input(client, prompt):
                                 'doc_id': hit['_source']['doc_id'],
                                 'locked': False
                             }
-                            context_chunks.append(f"uuid: {unique_id}, passage: {hit['_source']['passage']}")
+                            context_chunks.append(f"uuid: {unique_id}\n document: {hit['_source']['passage']}")
 
                     context = "\n\n".join(context_chunks)
 

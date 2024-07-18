@@ -58,7 +58,7 @@ def initialize_opensearch():
 
 def setup_streamlit_ui():
     st.set_page_config(page_title="Prism-bot v0.1")
-    st.title("Prism-bot v0.1")
+    st.title("Prism PoC Chatbot")
 
     # Sidebar
     st.sidebar.title("Sample questions")

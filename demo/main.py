@@ -98,7 +98,7 @@ def select_top_documents(hybrid_results, max_docs=10):
     # Finds the largest score drop-off
     score_diffs = [scores[i] - scores[i+1] for i in range(len(scores)-1)]
     if score_diffs:
-        max_drop_index = score_diffs.index(max(score_diffs))
+        max_drop_index = max(score_diffs.index(max(score_diffs)), 4) # pick atleast 5 docs
         print_terminal(f"Dropping documents from index {max_drop_index+1}", Fore.CYAN)
         print_terminal(f"Picked docs and scores: {[(doc['_id'], doc['_score']) for doc in selected_docs]}", Fore.CYAN)
         print_terminal(f"Top 10 dropped docs and scores: {[(doc['_id'], doc['_score']) for doc in sorted_docs[max_drop_index+1:max_drop_index+11]]}", Fore.CYAN)

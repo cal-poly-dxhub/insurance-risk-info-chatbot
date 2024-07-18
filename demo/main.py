@@ -173,7 +173,7 @@ def process_user_input(client, prompt):
 
                     print_terminal("Preparing LLM request", Fore.YELLOW)
                     model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
-                    temperature = 0.7
+                    temperature = 0
                     
                     print_terminal("Sending request to LLM", Fore.YELLOW)
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
@@ -197,16 +197,7 @@ def process_user_input(client, prompt):
                         elif 'locked_' in data['doc_id']:
                             data['locked'] = True
                             data['doc_id'] = data['doc_id'].replace("locked_", "")
-                        # print_terminal("Old url: ", Fore.CYAN)
-                        # print_terminal(data['url'], Fore.CYAN)
-                        # s = time.time()
-                        # modified_url =  get_url_with_page(data['url'], data['passage'], timeout=2)
-                        # e = time.time()
-                        # print_terminal(f"Time elapsed in modification: {e-s:.2f} seconds", Fore.YELLOW)
-                        # if modified_url is not None:
-                        #     data['url'] = modified_url
-                        # print_terminal("New url: ", Fore.CYAN)
-                        # print_terminal(data['url'], Fore.CYAN)
+
                         llm_response = llm_response.replace(uuid, f"[{data['doc_id']}]({data['url']})")
 
                     if check_irrelevant_question(llm_response):

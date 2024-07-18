@@ -21,7 +21,7 @@ def generate_response(messages, model_id, temperature):
         "max_tokens": 1000,
         "temperature": temperature,
         "top_k": 100,
-        "top_p": 0.8,
+        "top_p": 0.999,
     }
 
     formatted_messages = []
@@ -54,8 +54,8 @@ def classify_query(query):
         classification_prompt = file.read()
 
     messages = [("user", classification_prompt.format(query=query))]
-    model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    # model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+    # model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
     temperature = 0
 
     response = generate_response(messages, model_id, temperature)
@@ -80,6 +80,32 @@ def get_llm_response(user_query, context, model_id, temperature):
     response = generate_response(messages, model_id, temperature)
 
     return response, count_tokens(llm_prompt)
+
+def classify_response(prompt):
+    """Invoke Claude 3 LLM and return the response."""
+    try:
+        bedrock_runtime = boto3.client(service_name='bedrock-runtime')
+
+        model_id = "anthropic.claude-3-haiku-20240307-v1:0"
+
+        body = json.dumps({
+            "anthropic_version": "bedrock-2023-05-31",
+            "system": "Determine if the provided answer properly answers the question. Respond only with YES or NO.",
+            "max_tokens": 2000,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 1,
+            "top_p": 0.999,
+            "top_k": 250,
+        })
+
+        response = bedrock_runtime.invoke_model(body=body, modelId=model_id)
+        response_body = json.loads(response.get('body').read())
+        
+        return response_body["content"][0]["text"]
+
+    except Exception as e:
+        print(f"Claude Error: {e}")
+        return None
 
 # def summarize(input_text):
 #     with open("summarize_prompt.txt", "r") as file:

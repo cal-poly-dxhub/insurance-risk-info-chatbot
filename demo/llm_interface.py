@@ -54,8 +54,8 @@ def classify_query(query):
         classification_prompt = file.read()
 
     messages = [("user", classification_prompt.format(query=query))]
-    # model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
-    model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+    model_id = "anthropic.claude-3-5-sonnet-20240620-v1:0"
+    # model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
     temperature = 0
 
     response = generate_response(messages, model_id, temperature)

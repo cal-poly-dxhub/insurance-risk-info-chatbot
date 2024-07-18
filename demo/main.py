@@ -8,7 +8,6 @@ from colorama import Fore
 import random
 import string
 from pdf_utils import get_url_with_page
-# from search_utils import _get_emb_, hybrid_search, normalize_scores_0
 from search_utils import _get_emb_, hybrid_search
 import time
 
@@ -83,7 +82,7 @@ def select_top_documents(hybrid_results, max_docs=10):
     selected_docs = sorted_docs[:max_docs]
     scores = [doc['_score'] for doc in selected_docs]
     
-    # Find the largest score drop-off
+    # Finds the largest score drop-off
     score_diffs = [scores[i] - scores[i+1] for i in range(len(scores)-1)]
     if score_diffs:
         max_drop_index = score_diffs.index(max(score_diffs))
@@ -178,8 +177,10 @@ def process_user_input(client, prompt):
                             data['doc_id'] = data['doc_id'].replace("locked_", "")
                         print_terminal("Old url: ", Fore.CYAN)
                         print_terminal(data['url'], Fore.CYAN)
-                        # data['url'] = get_url_with_page(data['url'], data['passage'])
+                        s = time.time()
                         modified_url =  get_url_with_page(data['url'], data['passage'], timeout=2)
+                        e = time.time()
+                        print_terminal(f"Time elapsed in modification: {e-s:.2f} seconds", Fore.YELLOW)
                         if modified_url is not None:
                             data['url'] = modified_url
                         print_terminal("New url: ", Fore.CYAN)

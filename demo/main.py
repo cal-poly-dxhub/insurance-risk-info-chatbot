@@ -10,18 +10,6 @@ import string
 from pdf_utils import get_url_with_page
 from search_utils import _get_emb_, hybrid_search
 import time
-import concurrent.futures
-
-def process_url(uuid, data):
-    print_terminal(f"Processing URL for {uuid}", Fore.CYAN)
-    print_terminal("Old url: ", Fore.CYAN)
-    print_terminal(data['url'], Fore.CYAN)
-    modified_url = get_url_with_page(data['url'], data['passage'], timeout=2)
-    if modified_url is not None:
-        data['url'] = modified_url
-    print_terminal("New url: ", Fore.CYAN)
-    print_terminal(data['url'], Fore.CYAN)
-    return uuid, data
 
 def get_parameter(param_name):
     ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
@@ -158,8 +146,8 @@ def process_user_input(client, prompt):
         with st.spinner("Thinking..."):
             try:
                 print_terminal("Executing OpenSearch queries", Fore.YELLOW)
-                lexical_results = client.search(index="prism-index-v3", body=lexical_query)
-                semantic_results = client.search(index="prism-index-v3", body=semantic_query)
+                lexical_results = client.search(index="YOUR_INDEX_NAME", body=lexical_query)
+                semantic_results = client.search(index="YOUR_INDEX_NAME", body=semantic_query)
                 print_terminal("OpenSearch queries executed successfully", Fore.GREEN)
 
                 hybrid_results = hybrid_search(20, lexical_results, semantic_results, interpolation_weight=0.5, normalizer="minmax", use_rrf=False)
@@ -194,15 +182,6 @@ def process_user_input(client, prompt):
                     llm_response, token_count = get_llm_response(prompt, context, model_id, temperature)
                     print_terminal("Received response from LLM", Fore.GREEN)
 
-                     # Parallel URL modification
-                    print_terminal("Starting parallel URL modification", Fore.YELLOW)
-                    url_mod_start = time.time()
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future_to_uuid = {executor.submit(process_url, uuid, data): uuid for uuid, data in id_url_doc_map.items()}
-                        concurrent.futures.wait(future_to_uuid.keys(), timeout=2)
-                    
-                    url_mod_end = time.time()
-                    print_terminal(f"URL modification completed in {url_mod_end - url_mod_start:.2f} seconds", Fore.GREEN)
 
                     # Replace UUIDs with URLs in the LLM response
                     for uuid, data in id_url_doc_map.items():

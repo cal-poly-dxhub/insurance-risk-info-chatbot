@@ -15,6 +15,7 @@ import time
 import openpyxl
 from openpyxl.cell import Cell
 from openpyxl.worksheet.cell_range import CellRange
+from citation_tools import get_page_num, get_pdf_stream
 
 s3 = boto3.client("s3")
 from botocore.config import Config
@@ -33,6 +34,9 @@ from io import StringIO
 
 client = Anthropic()
 bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name='YOUR_AWS_REGION', config=config)
+
+INDEX_NAME = "YOUR_INDEX_NAME"
+
 
 """
 This dictionary `model_dimension_mapping` maps different model names to their respective embedding dimensions.
@@ -157,7 +161,6 @@ def _invoke_bedrock_with_retries(current_chat, chat_template, question, model_id
             else:
                 # Some other API error, rethrow
                 raise
-
 
 def process_document(bucket_name, s3_file, document_url):
     # Textractor
@@ -719,9 +722,9 @@ def process_document(bucket_name, s3_file, document_url):
             except:
                 continue
 
-    with open(f"{doc_id}.json", "w") as f:
+    with open(f"json_data/{doc_id}.json", "w") as f:
         json.dump(chunk_header_mapping, f)
-    s3.upload_file(f"{doc_id}.json", BUCKET, f"{doc_id}.json")
+    s3.upload_file(f"json_data/{doc_id}.json", BUCKET, f"{doc_id}.json")
 
     from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
     from requests_aws4auth import AWS4Auth
@@ -750,64 +753,70 @@ def process_document(bucket_name, s3_file, document_url):
     )
 
     # Sample Opensearch domain index mapping
-    mapping = {
-        'settings': {
-            'index': {
-                'knn': True,
-                "knn.algo_param.ef_search": 100,
-            }
-        },
+    # mapping = {
+    #     'settings': {
+    #         'index': {
+    #             'knn': True,
+    #             "knn.algo_param.ef_search": 100,
+    #         }
+    #     },
 
-        'mappings': {
-            'properties': {
-                'embedding': {
-                    'type': 'knn_vector',
-                    'dimension': model_dimension_mapping[model],  # change as per sequence length of Embedding Model
-                    "method": {
-                        "name": "hnsw",
-                        "space_type": "cosinesimil",
-                        "engine": "nmslib",
-                        "parameters": {
-                            "ef_construction": 256,
-                            "m": 48
-                        }
-                    }
-                },
+    #     'mappings': {
+    #         'properties': {
+    #             'embedding': {
+    #                 'type': 'knn_vector',
+    #                 'dimension': model_dimension_mapping[model],  # change as per sequence length of Embedding Model
+    #                 "method": {
+    #                     "name": "hnsw",
+    #                     "space_type": "cosinesimil",
+    #                     "engine": "nmslib",
+    #                     "parameters": {
+    #                         "ef_construction": 256,
+    #                         "m": 48
+    #                     }
+    #                 }
+    #             },
 
-                'passage': {
-                    'type': 'text'
-                },
+    #             'passage': {
+    #                 'type': 'text'
+    #             },
 
-                'doc_id': {
-                    'type': 'keyword'
-                },
+    #             'page': {
+    #                 'type': 'long'
+    #             },
 
-                'table': {
-                    'type': 'text'
-                },
+    #             'doc_id': {
+    #                 'type': 'keyword'
+    #             },
 
-                'list': {
-                    'type': 'text'
-                },
+    #             'table': {
+    #                 'type': 'text'
+    #             },
 
-                'title_headers': {
-                    'type': 'text'
-                },
-                'section_header_ids': {
-                    'type': 'text'
-                },
-                'section_title_ids': {
-                    'type': 'text'
-                },
-                'url': {
-                    'type': 'text'
-                },
+    #             'list': {
+    #                 'type': 'text'
+    #             },
 
-            }
-        }
-    }
+    #             'title_headers': {
+    #                 'type': 'text'
+    #             },
+    #             'section_header_ids': {
+    #                 'type': 'text'
+    #             },
+    #             'section_title_ids': {
+    #                 'type': 'text'
+    #             },
+    #             'url': {
+    #                 'type': 'text'
+    #             },
 
-    domain_index = f"test2-{model}-new"  # domain index name
+    #         }
+    #     }
+    # }
+
+    #domain_index = f"test2-{model}-new"  # domain index name
+
+    domain_index = INDEX_NAME
 
     # Index creation code
     # if not os_.indices.exists(index=domain_index):
@@ -825,6 +834,7 @@ def process_document(bucket_name, s3_file, document_url):
     #print(chunks)
     i = 1
     SAGEMAKER = boto3.client('sagemaker-runtime')
+    page_text = get_pdf_stream(document_url, "YOUR_PASSWORD")
     for ids, chunkks in chunks.items():  # Iterate through the page title chunks
         try:
             index_adjuster = len(chunk_header_mapping[ids]) % len(chunkks)
@@ -845,9 +855,12 @@ def process_document(bucket_name, s3_file, document_url):
                 if ids in list_header_dict:
                     if [x for x in list_header_dict[ids] if x == chunk_ids]:
                         lists = "\n".join(list_header_dict[ids][chunk_ids])
+
+                page_num = get_page_num(page_text, passage_chunk)
                 documentt = {
                     'doc_id': doc_id,  # doc name
                     'passage': passage_chunk,
+                    'page': page_num,
                     'embedding': embedding,
                     'table': table,
                     "list": lists,
@@ -869,7 +882,6 @@ def process_document(bucket_name, s3_file, document_url):
             else:
                 continue
 
-INDEX_NAME = "test2-titanv2-new"
 
 def process_xlsx(bucket_name, file_name, text, url):
     from opensearchpy import OpenSearch, RequestsHttpConnection, AWSV4SignerAuth
@@ -904,7 +916,8 @@ def process_xlsx(bucket_name, file_name, text, url):
     document = {
         'doc_id': file_name,
         'passage': text,
-        'embedding': _get_emb_(text, model),  # Example embedding vector
+        'page': None,
+        'embedding': _get_emb_(text, model),
         'table': None,
         'list': None,
         'section_header_ids': None,

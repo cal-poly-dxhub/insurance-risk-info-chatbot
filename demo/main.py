@@ -60,12 +60,25 @@ def setup_streamlit_ui():
     st.set_page_config(page_title="Prism-bot v0.1")
     st.title("Prism PoC Chatbot")
 
-    # Sidebar
-    st.sidebar.title("Sample questions")
-    st.sidebar.code("What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?", language="plaintext")
-    st.sidebar.code("What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?", language="plaintext")
-    st.sidebar.code("What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?", language="plaintext")
-    st.sidebar.code("What are the five basic steps in administering insurance clauses in contracts?", language="plaintext")
+    suggested_questions = [
+        "What should an employer do if a selected employee becomes unavailable for random DOT drug and alcohol testing within the selection period?",
+        "What are some important updates that should be made to maintain an accurate random program pool for DOT drug and alcohol testing?",
+        "What steps should an agency take if they participate in a Consortium or use a Third Party Administrator (TPA) for their DOT drug and alcohol testing program?",
+        "What are the five basic steps in administering insurance clauses in contracts?",
+        "What PPE should a fire fighter have?",
+        "What does an elementary teacher do?",
+        "What are the risks of being a carpenter?",
+        "How should I prepare for public power shutoffs?",
+        "What are signs of unusual mail handling?",
+        "What color is the sky?",
+    ]
+
+    with st.sidebar:
+        st.markdown("Sample Questions")
+        for question in suggested_questions:
+            if st.button(question):
+                st.session_state['current_question'] = question
+                st.session_state['submit'] = True
 
     if 'messages' not in st.session_state:
         st.session_state.messages = []
@@ -145,8 +158,8 @@ def process_user_input(client, prompt):
         with st.spinner("Thinking..."):
             try:
                 print_terminal("Executing OpenSearch queries", Fore.YELLOW)
-                lexical_results = client.search(index="test2-titanv2-new", body=lexical_query)
-                semantic_results = client.search(index="test2-titanv2-new", body=semantic_query)
+                lexical_results = client.search(index="prism-index-v3", body=lexical_query)
+                semantic_results = client.search(index="prism-index-v3", body=semantic_query)
                 print_terminal("OpenSearch queries executed successfully", Fore.GREEN)
 
                 hybrid_results = hybrid_search(20, lexical_results, semantic_results, interpolation_weight=0.5, normalizer="minmax", use_rrf=False)
@@ -160,12 +173,13 @@ def process_user_input(client, prompt):
                     context_chunks = []
 
                     for hit in selected_docs:
-                        if 'passage' in hit['_source'] and 'url' in hit['_source'] and 'doc_id' in hit['_source']:
+                        if 'passage' in hit['_source'] and 'url' in hit['_source'] and 'doc_id' in hit['_source'] and 'page' in hit['_source']:
                             unique_id = generate_unique_id(id_url_doc_map.keys())
                             id_url_doc_map[unique_id] = {
                                 'url': hit['_source']['url'],
                                 'passage': hit['_source']['passage'],
                                 'doc_id': hit['_source']['doc_id'],
+                                'page': hit['_source']['page'],
                                 'locked': False
                             }
                             context_chunks.append(f"uuid: {unique_id}\n document: {hit['_source']['passage']}")
@@ -199,6 +213,9 @@ def process_user_input(client, prompt):
                             data['locked'] = True
                             data['doc_id'] = data['doc_id'].replace("locked_", "")
 
+                        if data['page'] is not None:
+                            data['url'] += f"#page={data['page']}"
+
                         llm_response = llm_response.replace(uuid, f"[{data['doc_id']}]({data['url']})")
 
                     if check_irrelevant_question(llm_response):
@@ -225,6 +242,9 @@ def process_user_input(client, prompt):
 def main():
     print_terminal("Starting Prism-bot v0.1", Fore.GREEN)
 
+    if 'current_question' not in st.session_state:
+        st.session_state['current_question'] = ''
+
     client = initialize_opensearch()
     if not client:
         st.error("Failed to connect to OpenSearch. Please check your connection and try again.")
@@ -238,6 +258,11 @@ def main():
         process_user_input(client, prompt)
         query_end_time = time.time()
         print_terminal(f"Query processing time: {query_end_time - query_start_time:.2f} seconds", Fore.YELLOW)
+
+    if st.session_state['current_question'] != '':
+        process_user_input(client, st.session_state['current_question'])
+        st.session_state['current_question'] = ''
+
     if st.sidebar.button("Clear Chat History"):
         print_terminal("Clearing chat history", Fore.CYAN)
         st.session_state.messages = []

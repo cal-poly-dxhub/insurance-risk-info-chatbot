@@ -75,6 +75,8 @@ def get_llm_response(user_query, context, model_id, temperature):
     llm_prompt = response_prompt.format(user_query=user_query, context=context)
     print_terminal("LLM prompt:", Fore.MAGENTA)
     print_terminal(llm_prompt, Fore.WHITE)
+    print_terminal("Temperature:", Fore.MAGENTA)
+    print_terminal(str(temperature), Fore.WHITE)
 
     messages = [("user", llm_prompt)]
     response = generate_response(messages, model_id, temperature)

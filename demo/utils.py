@@ -4,13 +4,17 @@ import json
 import logging
 init(autoreset=True)
 
-# logging.basicConfig(filename='/home/ec2-user/streamlit_app.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+logging.basicConfig(filename='/home/ec2-user/streamlit_app.log', level=logging.INFO, format='%(asctime)s - %(message)s')
 
 def print_terminal(message, color=Fore.WHITE, APP_ENV="prod"):
-    print(color + message)
-    # colored_message = f"{color}{message}{Fore.RESET}"
-    # print(colored_message)  # This will print to the console
-    # logging.info(message)   # This will log to the file without color codes
+    # print(color + message)
+    # with open('logs.txt', 'a') as f:
+    #     # f.write(message + '\n')
+    #     # write to file with color
+    #     f.write(color + message + Fore.RESET + '\n')
+    colored_message = f"{color}{message}{Fore.RESET}"
+    print(colored_message)  # This will print to the console
+    logging.info(message)   # This will log to the file without color codes
 
 def is_context_sufficient(llm_response):
     return "INSUFFICIENT CONTEXT" not in llm_response

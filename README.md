@@ -124,15 +124,35 @@ amazon.titan-embed-text-v2:0
     cdk deploy --all
 
     ```
+    Note: Copy the output value of the cdk stack creation cdk-aoss-vector-stack.cdkaossvectorstackEndpoint 
+    -- Example
+    ```
+       https://12345myendpoint.us-west-2.aoss.amazonaws.com
+    ```
 
-### 4. Upload Knowledge Articles
-- Locate the knowledge articles and upload them to the EC2 instance.
-- Update line 9 of `data-ingest/main.py` to point to the exact path of the rawText part of document folder.
+    Update the domain value listed in create_os_index.py
 
-- Example path: `/home/ec2-user/Knowledge_Articles`
+      Line 14:
+      ```
+      FROM domain_endpoint = "YOUR-DOMAIN-HERE"
+      TO: 12345myendpoint.us-west-2.aoss.amazonaws.com
+      ```
+    NOTE: remove https:// from output value
+
+  Now run create index
+  ```
+   python create_os_index.py
+  ```
 
 
-### 5. Configure Settings and run data import
+### 4. Upload URLs List
+- Create a set of URLs that you want to use as a source for your chatbot
+- Update data_processing/urls.txt
+
+- Example path: `/home/ec2-user/data_processing/urls.txt`
+
+
+### 5. Run data import process
 - Rename `example_config.yaml` to `config.yaml`:
   ```bash
   mv example_config.yaml config.yaml

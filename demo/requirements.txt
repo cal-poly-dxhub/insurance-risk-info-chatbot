@@ -1,4 +1,5 @@
 boto3
+aws-cdk-lib
 botocore
 colorama
 langchain_aws
@@ -11,12 +12,9 @@ Requests
 requests_aws4auth
 stopit
 streamlit
-<<<<<<< HEAD
 tiktoken
-=======
 opensearch-py
 requests-aws4auth
 tiktoken
 pypdf
 fuzzywuzzy
->>>>>>> 65cc40bec794e7d836d7cb707bd964ac883c6068

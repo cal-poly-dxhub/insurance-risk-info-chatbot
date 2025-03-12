@@ -145,21 +145,42 @@ amazon.titan-embed-text-v2:0
   ```
 
 
-### 4. Upload URLs List
+### 4. Prepare dataset for import
 - Create a set of URLs that you want to use as a source for your chatbot
 - Update data_processing/urls.txt
 
 - Example path: `/home/ec2-user/data_processing/urls.txt`
 
+Create an S3 bucket in your account to hold downloaded files and not the name of the bucket.
+Create a folder to store unlocked PDFs
 
+Next update the code with th bucket name
+```
+ cd ~/insurance-risk-info-chatbot/data_processing
+ vi download_prism.py
+ Update Line 15:
+  BUCKET_NAME = "YOUR_BUCKET_NAME"
+ Update Line 16:
+  UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
+
+Example:
+BUCKET_NAME = "chatbot_data"
+UNLOCKED_PDFS_FOLDER = "unlocked_pdfs"
+
+```
+Lastly enter the password used to unlock the PDFs on line 288
+
+Save changes
+
+Next modify document_processor.py
+```
+vi document_processor.py
+
+Update INDEX_NAME on line 38
+```
 ### 5. Run data import process
-- Rename `example_config.yaml` to `config.yaml`:
-  ```bash
-  mv example_config.yaml config.yaml
-  ```
-- Update the values in `config.yaml` with your specific information.
-
-- After data has been added to /home/ec2-user/Knowledge_Articles run data ingest
+- python download_prism.py
+- 
 ### 6. Run the streamlit app in the `chatbot` directory with
 ```
 cd /home/ec2-user/insurance-risk-info-chatbot/demo/

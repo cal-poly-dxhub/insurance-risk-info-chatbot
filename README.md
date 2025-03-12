@@ -115,7 +115,7 @@ amazon.titan-embed-text-v2:0
 
 - CDK deploy 
     ```
-    cd cdk
+    cd ~/insurance-risk-info-chatbot/cdk
 
     cdk synth
 

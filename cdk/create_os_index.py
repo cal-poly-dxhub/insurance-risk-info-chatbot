@@ -9,9 +9,9 @@ This script demonstrates indexing documents into an Amazon OpenSearch Service do
 model = "titanv2"
 # Use OpenSearch Servelss or Not
 openserach_serverless = True
-service = 'es'
+service = 'aoss'
 # replace wit your OpenSearch Service domain/Serverless endpoint
-domain_endpoint = "YOUR-DOMAIN-HERE"
+domain_endpoint = "qlocxlzg30mhnqbqq628.us-west-2.aoss.amazonaws.com"
 
 credentials = boto3.Session().get_credentials()
 awsauth = AWSV4SignerAuth(credentials, "us-west-2", service)

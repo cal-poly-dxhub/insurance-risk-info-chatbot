@@ -108,7 +108,7 @@ amazon.titan-embed-text-v2:0
 
     source env/bin/activate
 
-    cd insurance-risk-info-chatbot
+    cd insurance-risk-info-chatbot/demo
 
     pip3.11 install -r requirements.txt
     ```

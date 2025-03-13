@@ -154,12 +154,17 @@ amazon.titan-embed-text-v2:0
 Create an S3 bucket in your account to hold downloaded files and not the name of the bucket.
 Create a folder to store unlocked PDFs
 
+Create local directories to process data:
+ cd ~/insurance-risk-info-chatbot/data_processing
+ mkdir json_data
+ mkdir data
+
 Next we need to update the following files:
  doc_to_opensearch.py
  document_processor.py
  download_prism.py
 ```
- cd ~/insurance-risk-info-chatbot/data_processing
+ 
  vi doc_to_opensearch.py
      Update:
      Line 13 -> BUCKET_NAME = "chatbot_data"
@@ -179,32 +184,33 @@ Next we need to update the following files:
      Line 16: UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
      Line 288: PASSWORD = "YOUR_PASSWORD"
 
-
 ```
     
-Enter the password used to unlock the PDFs on line 288
-
-Save changes
-
-Next modify document_processor.py
-```
-vi document_processor.py
-
-Update INDEX_NAME on line 38
-```
-Lastly modify doc_to_opensearch.py
-
-```
-Update BUCKET_NAME on Line 16
-Update password on Line 179
-```
 
 ### 5. Run data import process
-- python download_prism.py
-- p
+ Configure your local region 
+ aws configure
+ Skip key access but enter your region
+ AWS Access Key ID [None]: 
+ AWS Secret Access Key [None]: 
+ Default region name []: YOURREGION 
+ 
+ python doc_to_opensearch.py
+
+ Note: The ingest will take a few hourse
+ 
 ### 6. Run the streamlit app in the `chatbot` directory with
-```
+
 cd /home/ec2-user/insurance-risk-info-chatbot/demo/
+
+Modify main.py as follows
+
+vi main.py
+Line 14: INDEX_NAME="OPENSEARCHINDEX"
+Line 15: domain="YOUROPENSEARCHDOMAIN"
+Line 32: region = 'YOURREGION'
+
+```
 
 streamlit run main.py
 ```
@@ -219,5 +225,5 @@ By following these steps, you will have a properly deployed and configured syste
 For any queries or issues, please contact:
 - Darren Kraker, Sr Solutions Architect - dkraker@amazon.com
 - Nick Riley, Software Developer Intern - njriley@calpoly.edu
-- Noor Dhaliwal, Software Developer Intern - rdhali07@calpoly.edu
+- Swayam Chidrawar, Software Developer Intern - schidraw@calpoly.edu
 

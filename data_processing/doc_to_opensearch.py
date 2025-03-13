@@ -122,25 +122,39 @@ def unlock_and_get_excel_as_csv_string(file_path, password):
         return None
     
 def format_xlsx(prompt):
-    """Invoke Claude 3 LLM and return the response."""
+    """Invoke Claude 3.5 (messages API) via Bedrock and return the response."""
     try:
-        model_id = "anthropic.claude-3-sonnet-20240229-v1:0"
+        model_id = "anthropic.claude-3-5"  # or your current Claude model ARN/version
         bedrock_runtime = boto3.client(service_name='bedrock-runtime')
-
-        body = json.dumps({
-            "anthropic_version": "bedrock-2023-05-31",
-            "system": "Format this data into a  human readable format. Make sure all data is included.",
-            "max_tokens": 2000,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 1,
-            "top_p": 0.999,
-            "top_k": 250,
-        })
-
-        response = bedrock_runtime.invoke_model(body=body, modelId=model_id)
-        response_body = json.loads(response.get('body').read())
         
-        return response_body["content"][0]["text"]
+        # Build the request using the new messages format
+        body = {
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Format this data into a human readable format. Make sure all data is included."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            "max_tokens_to_sample": 2000,
+            "temperature": .5,
+            "top_p": 0.999,
+            "top_k": 250
+        }
+
+        # Invoke the model
+        response = bedrock_runtime.invoke_model(
+            body=json.dumps(body),
+            modelId=model_id,
+            contentType="application/json"
+        )
+
+        # Parse the response
+        response_body = json.loads(response.get('body').read())
+        return response_body["modelOutputs"][0]["completion"]
 
     except Exception as e:
         print(f"Claude Error: {e}")

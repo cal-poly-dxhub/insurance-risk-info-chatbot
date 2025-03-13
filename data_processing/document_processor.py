@@ -19,7 +19,7 @@ from citation_tools import get_page_num, get_pdf_stream
 
 s3 = boto3.client("s3")
 from botocore.config import Config
-from langchain_community.embeddings import BedrockEmbeddings
+from langchain_aws import BedrockEmbeddings
 
 config = Config(
     read_timeout=600,
@@ -27,15 +27,13 @@ config = Config(
         max_attempts=5
     )
 )
-from anthropic import Anthropic
 import re
 import pandas as pd
 from io import StringIO
 
-client = Anthropic()
-bedrock_runtime = boto3.client(service_name='bedrock-runtime', region_name='YOUR_AWS_REGION', config=config)
+bedrock_runtime = boto3.client(service_name='bedrock-runtime', config=config)
 
-INDEX_NAME = "YOUR_INDEX_NAME"
+INDEX_NAME = "prism-index"
 
 
 """
@@ -52,7 +50,7 @@ def _get_emb_(passage, model):
     """
 
     # create an Amazon Titan Text Embeddings client
-    embeddings_client = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0", region_name="YOUR_AWS_REGION")
+    embeddings_client = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0")
 
     # Invoke the model
     embedding = embeddings_client.embed_query(passage)
@@ -131,6 +129,7 @@ def bedrock_claude_(chat_history, system_message, prompt, model_id, image_path=N
 
 
 def _invoke_bedrock_with_retries(current_chat, chat_template, question, model_id, image_path):
+    print("Retrying bedrock")
     max_retries = 5
     backoff_base = 2
     max_backoff = 3  # Maximum backoff time in seconds
@@ -170,7 +169,7 @@ def process_document(bucket_name, s3_file, document_url):
     BUCKET = bucket_name
     file = s3_file
 
-    extractor = Textractor(region_name="YOUR_AWS_REGION")
+    extractor = Textractor(region_name="us-west-2")
 
     doc_id = os.path.basename(file)
     file_name, ext = os.path.splitext(file)
@@ -736,12 +735,12 @@ def process_document(bucket_name, s3_file, document_url):
     model = "titanv2"
     # Use OpenSearch Servelss or Not
     YOUR_OPENSEARCH_ENDPOINT = True
-    service = 'es'
+    service = 'aoss'
     # replace wit your OpenSearch Service domain/Serverless endpoint
-    domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT" if YOUR_OPENSEARCH_ENDPOINT else "YOUR_OPENSEARCH_ENDPOINT"
+    domain_endpoint = "qlocxlzg30mhnqbqq628.us-west-2.aoss.amazonaws.com"
 
     credentials = boto3.Session().get_credentials()
-    awsauth = AWSV4SignerAuth(credentials, "YOUR_AWS_REGION", service)
+    awsauth = AWSV4SignerAuth(credentials, "us-west-2", service)
     os_ = OpenSearch(
         hosts=[{'host': domain_endpoint, 'port': 443}],
         http_auth=awsauth,
@@ -834,7 +833,7 @@ def process_document(bucket_name, s3_file, document_url):
     #print(chunks)
     i = 1
     SAGEMAKER = boto3.client('sagemaker-runtime')
-    page_text = get_pdf_stream(document_url, "YOUR_PASSWORD")
+    page_text = get_pdf_stream(document_url, "PRISMresource")
     for ids, chunkks in chunks.items():  # Iterate through the page title chunks
         try:
             index_adjuster = len(chunk_header_mapping[ids]) % len(chunkks)
@@ -890,12 +889,12 @@ def process_xlsx(bucket_name, file_name, text, url):
     model = "titanv2"
     # Use OpenSearch Servelss or Not
     YOUR_OPENSEARCH_ENDPOINT = True
-    service = 'es'
+    service = 'aoss'
     # replace wit your OpenSearch Service domain/Serverless endpoint
-    domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT" if YOUR_OPENSEARCH_ENDPOINT else "YOUR_OPENSEARCH_ENDPOINT"
+    domain_endpoint = "qlocxlzg30mhnqbqq628.us-west-2.aoss.amazonaws.com"
     
     credentials = boto3.Session().get_credentials()
-    awsauth = AWSV4SignerAuth(credentials, "YOUR_AWS_REGION", service)
+    awsauth = AWSV4SignerAuth(credentials, "us-west-2", service)
     os_ = OpenSearch(
         hosts=[{'host': domain_endpoint, 'port': 443}],
         http_auth=awsauth,

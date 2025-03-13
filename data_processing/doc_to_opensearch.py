@@ -13,7 +13,7 @@ import re
 import boto3
 from document_processor import process_document, process_xlsx
 
-BUCKET_NAME = "YOUR_BUCKET_NAME"
+BUCKET_NAME = "dxhub-test-prism"
 
 def get_last_part_of_url(url):
     url = url.rstrip('/')
@@ -147,6 +147,7 @@ def format_xlsx(prompt):
         return None
     
 def unlock_and_save_pdf(file_path, password):
+    print("Unlocking ", file_path)
     try:
         doc = fitz.open(file_path)
         if doc.is_encrypted:
@@ -156,6 +157,7 @@ def unlock_and_save_pdf(file_path, password):
         unlocked_file_path = f"data/unlocked_{os.path.basename(file_path)}"
         doc.save(unlocked_file_path)
         doc.close()
+        print("Unlocked ", unlocked_file_path)
         
         return unlocked_file_path
     except Exception as e:
@@ -176,12 +178,12 @@ for url in urls:
     url = url.strip()
     file_name = get_last_part_of_url(url)
     file_path = f"{file_name}"
-    password = 'YOUR_PASSWORD'
+    password = 'PRISMresource'
 
     # Download the file
     file_type = download_file(url, file_path)
 
-    #print(f"Detected file type: {file_type}")
+    print(f"Detected file type: {file_type}")
 
     # if file_type == 'application/encrypted':
     #     # Try to process as PDF
@@ -194,13 +196,13 @@ for url in urls:
 
         pdf_path = unlock_and_save_pdf(file_path, password)
 
-        
+        print("Processing ", pdf_path) 
         process_document(BUCKET_NAME, pdf_path, url)
         print(f"Successfully processed PDF {file_name}")
 
     elif 'xlsx' in file_type.lower() or 'spreadsheet' in file_type.lower():
         csv_path = file_path + ".pdf"
-
+        print("Processing ", file_path)
         csv_text = unlock_and_get_excel_as_csv_string(file_path, password)
         job = extract_job_title(csv_text)
         csv_text = format_xlsx(csv_text)

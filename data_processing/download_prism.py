@@ -12,8 +12,8 @@ import csv
 import re
 import boto3
 
-BUCKET_NAME = "YOUR_BUCKET_NAME"
-UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
+BUCKET_NAME = "dxhub-test-prism"
+UNLOCKED_PDFS_FOLDER = "unlocked_pdfs"
 
 s3_client = boto3.client('s3')
 
@@ -144,9 +144,6 @@ import csv
 import re
 import boto3
 from document_processor import process_document, process_xlsx
-
-BUCKET_NAME = "YOUR_BUCKET_NAME"
-UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
 
 s3_client = boto3.client('s3')
 
@@ -288,7 +285,7 @@ def rename_to_pdf(file_path):
     
     return new_file_path
 
-PASSWORD = "YOUR_PASSWORD"
+PASSWORD = "PRISMresource"
 
 with open("urls.txt", "r") as file:
     urls = file.readlines()
@@ -297,7 +294,7 @@ for url in urls:
     url = url.strip()
     file_name = get_last_part_of_url(url)
     file_path = f"{file_name}"
-    password = 'YOUR_PASSWORD'
+    password = 'PRISMresource'
 
     # Download the file
     file_type = download_file(url, file_path)

@@ -16,5 +16,11 @@ tiktoken
 opensearch-py
 requests-aws4auth
 tiktoken
-pypdf
 fuzzywuzzy
+PyMuPDF
+python-magic
+msoffcrypto-tool
+openpyxl
+textractor
+amazon-textract-textractor
+inflect

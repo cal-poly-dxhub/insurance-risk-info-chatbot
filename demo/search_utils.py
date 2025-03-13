@@ -13,7 +13,7 @@ def _get_emb_(passage):
     """
 
     # create an Amazon Titan Text Embeddings client
-    embeddings_client = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0", region_name="YOUR_AWS_REGION")
+    embeddings_client = BedrockEmbeddings(model_id="amazon.titan-embed-text-v2:0")
 
     # Invoke the model
     embedding = embeddings_client.embed_query(passage)

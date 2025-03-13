@@ -11,22 +11,24 @@ from pdf_utils import get_url_with_page
 from search_utils import _get_emb_, hybrid_search
 import time
 
+INDEX_NAME="prism-index"
+domain="YOUROPENSEARCHDOMAIN"
+
 def get_parameter(param_name):
-    ssm = boto3.client('ssm', region_name='YOUR_AWS_REGION')
+    ssm = boto3.client('ssm')
     response = ssm.get_parameter(Name=param_name, WithDecryption=True)
     return response['Parameter']['Value']
 
 def initialize_opensearch():
-    region = 'YOUR_AWS_REGION'
-    service = 'es'
-    domain = get_parameter('/prism/opensearch/domain')
-
+    region = 'us-west-2'
+    service = 'aoss'
+    #domain = get_parameter('/prism/opensearch/domain')
+    print_terminal(f"Domain=({domain})",Fore.GREEN)
     print_terminal("Initializing AWS credentials", Fore.YELLOW)
     credentials = boto3.Session().get_credentials()
     awsauth = AWS4Auth(credentials.access_key, credentials.secret_key,
                        region, service, session_token=credentials.token)
     print_terminal("AWS credentials initialized successfully", Fore.GREEN)
-
     print_terminal("Establishing connection to OpenSearch", Fore.YELLOW)
     client = OpenSearch(
         hosts = [{'host': domain, 'port': 443}],
@@ -37,8 +39,8 @@ def initialize_opensearch():
     )
 
     try:
-        info = client.info()
-        print_terminal(f"Successfully connected to OpenSearch. Cluster name: {info['cluster_name']}", Fore.GREEN)
+        info = client.cat.indices()
+        print_terminal("Successfully connected to OpenSearch.", Fore.GREEN)
         return client
     except Exception as e:
         print_terminal(f"Failed to connect to OpenSearch: {str(e)}", Fore.RED)
@@ -146,8 +148,8 @@ def process_user_input(client, prompt):
         with st.spinner("Thinking..."):
             try:
                 print_terminal("Executing OpenSearch queries", Fore.YELLOW)
-                lexical_results = client.search(index="YOUR_INDEX_NAME", body=lexical_query)
-                semantic_results = client.search(index="YOUR_INDEX_NAME", body=semantic_query)
+                lexical_results = client.search(index=INDEX_NAME, body=lexical_query)
+                semantic_results = client.search(index=INDEX_NAME, body=semantic_query)
                 print_terminal("OpenSearch queries executed successfully", Fore.GREEN)
 
                 hybrid_results = hybrid_search(20, lexical_results, semantic_results, interpolation_weight=0.5, normalizer="minmax", use_rrf=False)

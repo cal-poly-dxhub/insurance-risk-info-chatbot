@@ -737,7 +737,7 @@ def process_document(bucket_name, s3_file, document_url):
     YOUR_OPENSEARCH_ENDPOINT = True
     service = 'aoss'
     # replace wit your OpenSearch Service domain/Serverless endpoint
-    domain_endpoint = "qlocxlzg30mhnqbqq628.us-west-2.aoss.amazonaws.com"
+    domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
 
     credentials = boto3.Session().get_credentials()
     awsauth = AWSV4SignerAuth(credentials, "us-west-2", service)
@@ -891,8 +891,8 @@ def process_xlsx(bucket_name, file_name, text, url):
     YOUR_OPENSEARCH_ENDPOINT = True
     service = 'aoss'
     # replace wit your OpenSearch Service domain/Serverless endpoint
-    domain_endpoint = "qlocxlzg30mhnqbqq628.us-west-2.aoss.amazonaws.com"
-    
+    domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
+ 
     credentials = boto3.Session().get_credentials()
     awsauth = AWSV4SignerAuth(credentials, "us-west-2", service)
     os_ = OpenSearch(

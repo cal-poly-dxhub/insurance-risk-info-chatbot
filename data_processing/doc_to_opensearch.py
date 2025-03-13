@@ -13,7 +13,7 @@ import re
 import boto3
 from document_processor import process_document, process_xlsx
 
-BUCKET_NAME = "dxhub-test-prism"
+BUCKET_NAME = "YOURBUCKET"
 
 def get_last_part_of_url(url):
     url = url.rstrip('/')
@@ -178,7 +178,7 @@ for url in urls:
     url = url.strip()
     file_name = get_last_part_of_url(url)
     file_path = f"{file_name}"
-    password = 'PRISMresource'
+    password = 'PASSWORD'
 
     # Download the file
     file_type = download_file(url, file_path)

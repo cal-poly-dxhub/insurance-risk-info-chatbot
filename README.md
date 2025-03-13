@@ -124,22 +124,84 @@ amazon.titan-embed-text-v2:0
     cdk deploy --all
 
     ```
+    Note: Copy the output value of the cdk stack creation cdk-aoss-vector-stack.cdkaossvectorstackEndpoint 
+    -- Example
+    ```
+       https://12345myendpoint.us-west-2.aoss.amazonaws.com
+    ```
 
-### 4. Upload Knowledge Articles
-- Locate the knowledge articles and upload them to the EC2 instance.
-- Update line 9 of `data-ingest/main.py` to point to the exact path of the rawText part of document folder.
+    Update the domain value listed in create_os_index.py
 
-- Example path: `/home/ec2-user/Knowledge_Articles`
+      Line 14:
+      ```
+      FROM domain_endpoint = "YOUR-DOMAIN-HERE"
+      TO: 12345myendpoint.us-west-2.aoss.amazonaws.com
+      ```
+    NOTE: remove https:// from output value
 
-
-### 5. Configure Settings and run data import
-- Rename `example_config.yaml` to `config.yaml`:
-  ```bash
-  mv example_config.yaml config.yaml
+  Now run create index
   ```
-- Update the values in `config.yaml` with your specific information.
+   python create_os_index.py
+  ```
 
-- After data has been added to /home/ec2-user/Knowledge_Articles run data ingest
+
+### 4. Prepare dataset for import
+- Create a set of URLs that you want to use as a source for your chatbot
+- Update data_processing/urls.txt
+
+- Example path: `/home/ec2-user/data_processing/urls.txt`
+
+Create an S3 bucket in your account to hold downloaded files and not the name of the bucket.
+Create a folder to store unlocked PDFs
+
+Next we need to update the following files:
+ doc_to_opensearch.py
+ document_processor.py
+ download_prism.py
+```
+ cd ~/insurance-risk-info-chatbot/data_processing
+ vi doc_to_opensearch.py
+     Update:
+     Line 13 -> BUCKET_NAME = "chatbot_data"
+     Line 176 -> password = 'YOUR_PASSWORD'
+ save file
+
+ vi document_processor.py
+     Update:
+     Line 172 -> extractor = Textractor(region_name="YOURREGION")
+     Line 740 -> domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
+     Line 894 -> domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
+     Line 897 -> awsauth = AWSV4SignerAuth(credentials, "YOUR_AWS_REGION", service)
+
+ vi download_prism.py
+     Update:
+     Line 15: BUCKET_NAME = "YOUR_BUCKET_NAME"
+     Line 16: UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
+     Line 288: PASSWORD = "YOUR_PASSWORD"
+
+
+```
+    
+Enter the password used to unlock the PDFs on line 288
+
+Save changes
+
+Next modify document_processor.py
+```
+vi document_processor.py
+
+Update INDEX_NAME on line 38
+```
+Lastly modify doc_to_opensearch.py
+
+```
+Update BUCKET_NAME on Line 16
+Update password on Line 179
+```
+
+### 5. Run data import process
+- python download_prism.py
+- p
 ### 6. Run the streamlit app in the `chatbot` directory with
 ```
 cd /home/ec2-user/insurance-risk-info-chatbot/demo/

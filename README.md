@@ -154,21 +154,35 @@ amazon.titan-embed-text-v2:0
 Create an S3 bucket in your account to hold downloaded files and not the name of the bucket.
 Create a folder to store unlocked PDFs
 
-Next update the code with th bucket name
+Next we need to update the following files:
+ doc_to_opensearch.py
+ document_processor.py
+ download_prism.py
 ```
  cd ~/insurance-risk-info-chatbot/data_processing
- vi download_prism.py
- Update Line 15:
-  BUCKET_NAME = "YOUR_BUCKET_NAME"
- Update Line 16:
-  UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
+ vi doc_to_opensearch.py
+     Update:
+     Line 13 -> BUCKET_NAME = "chatbot_data"
+     Line 176 -> password = 'YOUR_PASSWORD'
+ save file
 
-Example:
-BUCKET_NAME = "chatbot_data"
-UNLOCKED_PDFS_FOLDER = "unlocked_pdfs"
+ vi document_processor.py
+     Update:
+     Line 172 -> extractor = Textractor(region_name="YOURREGION")
+     Line 740 -> domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
+     Line 894 -> domain_endpoint = "YOUR_OPENSEARCH_ENDPOINT"
+     Line 897 -> awsauth = AWSV4SignerAuth(credentials, "YOUR_AWS_REGION", service)
+
+ vi download_prism.py
+     Update:
+     Line 15: BUCKET_NAME = "YOUR_BUCKET_NAME"
+     Line 16: UNLOCKED_PDFS_FOLDER = "YOUR_FOLDER_NAME"
+     Line 288: PASSWORD = "YOUR_PASSWORD"
+
 
 ```
-Lastly enter the password used to unlock the PDFs on line 288
+    
+Enter the password used to unlock the PDFs on line 288
 
 Save changes
 
@@ -178,9 +192,16 @@ vi document_processor.py
 
 Update INDEX_NAME on line 38
 ```
+Lastly modify doc_to_opensearch.py
+
+```
+Update BUCKET_NAME on Line 16
+Update password on Line 179
+```
+
 ### 5. Run data import process
 - python download_prism.py
-- 
+- p
 ### 6. Run the streamlit app in the `chatbot` directory with
 ```
 cd /home/ec2-user/insurance-risk-info-chatbot/demo/
